@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -233,3 +232,78 @@ with col4:
     sns.heatmap(df_fwd, annot=True, fmt=".2f", cmap="coolwarm", ax=ax4, cbar_kws={'label': 'Forward Rate (%)'})
     ax4.set_title("Forward Rates Matrix")
     st.pyplot(fig4)
+
+# ========== UI MODULAR CON FECHAS INDEPENDIENTES ==========
+
+# Curva Spot
+st.subheader("1️⃣ Curva Spot del Tesoro")
+spot_dates = df_spot.index
+selected_spot = st.selectbox("📅 Fecha Spot", sorted(spot_dates, reverse=True).strftime("%Y-%m-%d"), key="spot")
+selected_spot = pd.to_datetime(selected_spot)
+
+spot_curve = df_spot.loc[selected_spot].dropna()
+fig1, ax1 = plt.subplots()
+x1 = [maturity_years[k] for k in spot_curve.index]
+ax1.plot(x1, spot_curve.values, marker='o')
+ax1.set_title("Curva Spot")
+ax1.set_xlabel("Vencimiento (años)")
+ax1.set_ylabel("Tasa (%)")
+ax1.grid(True)
+st.pyplot(fig1)
+
+# Curva Break-even
+st.subheader("2️⃣ Curva Break-even")
+be_dates = df_breakeven.index
+selected_be = st.selectbox("📅 Fecha Break-even", sorted(be_dates, reverse=True).strftime("%Y-%m-%d"), key="be")
+selected_be = pd.to_datetime(selected_be)
+
+if selected_be in df_breakeven.index:
+    be_curve = df_breakeven.loc[selected_be].dropna()
+    if not be_curve.empty:
+        x2 = [int(k.strip("Y")) for k in be_curve.index]
+        fig2, ax2 = plt.subplots()
+        ax2.plot(x2, be_curve.values, marker='o', label="Break-even")
+        ax2.axhline(2.0, color='gray', linestyle='--', label='Objetivo Fed')
+        ax2.set_title("Curva Break-even")
+        ax2.set_xlabel("Vencimiento (años)")
+        ax2.set_ylabel("Inflación Esperada (%)")
+        ax2.legend()
+        ax2.grid(True)
+        st.pyplot(fig2)
+    else:
+        st.info("ℹ️ No hay datos break-even disponibles para esta fecha.")
+else:
+    st.info("ℹ️ Fecha no válida para curva break-even.")
+
+# PCA Componentes
+st.subheader("3️⃣ Componentes PCA")
+pca_dates = pca_df.index
+selected_pca = st.selectbox("📅 Fecha PCA", sorted(pca_dates, reverse=True).strftime("%Y-%m-%d"), key="pca")
+selected_pca = pd.to_datetime(selected_pca)
+
+pca_vals = pca_df.loc[selected_pca]
+fig3, ax3 = plt.subplots()
+ax3.bar(pca_vals.index, pca_vals.values, color=["#1f77b4", "red" if pca_vals['Pendiente'] < -1 else "#1f77b4", "#2ca02c"])
+ax3.axhline(0, color='black', linestyle='--')
+ax3.set_title("PCA: Nivel, Pendiente, Curvatura")
+st.pyplot(fig3)
+
+# Forward Heatmap
+st.subheader("4️⃣ Heatmap de Forward Rates")
+fwd_dates = df_forward_all.index
+selected_fwd = st.selectbox("📅 Fecha Forward", sorted(fwd_dates, reverse=True).strftime("%Y-%m-%d"), key="fwd")
+selected_fwd = pd.to_datetime(selected_fwd)
+
+fwd_matrix = {}
+for i, t1 in enumerate(sorted_terms[:-1]):
+    row = {}
+    for t2 in sorted_terms[i+1:]:
+        label = f"{t1}→{t2}"
+        if label in df_forward_all.columns:
+            row[t2] = df_forward_all.loc[selected_fwd, label]
+    fwd_matrix[t1] = row
+df_fwd = pd.DataFrame(fwd_matrix).T
+fig4, ax4 = plt.subplots(figsize=(8, 5))
+sns.heatmap(df_fwd, annot=True, fmt=".2f", cmap="coolwarm", ax=ax4, cbar_kws={'label': 'Forward Rate (%)'})
+ax4.set_title("Forward Rates Matrix")
+st.pyplot(fig4)
