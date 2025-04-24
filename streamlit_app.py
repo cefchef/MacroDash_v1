@@ -118,10 +118,10 @@ st.subheader("5️⃣ Tablero de Tasas y Cambios (%)")
 # Función para calcular variaciones
 def calcular_cambios(df, label, columnas):
     tabla = pd.DataFrame(index=columnas)
-    tabla["Último"] = df.loc[selected_date, columnas]
+    tabla["Último"] = df.loc[selected_tablero, columnas]
     for dias, nombre in zip([1, 5, 21, 252], ['D', 'W', 'M', 'A']):
         try:
-            pasada = df.shift(dias).loc[selected_date, columnas]
+            pasada = df.shift(dias).loc[selected_tablero, columnas]
             cambio = ((tabla["Último"] - pasada) / pasada) * 100
             tabla[f"Cambio {nombre} (%)"] = cambio
         except:
@@ -162,9 +162,9 @@ def calcular_cambios(df, label, columnas):
     try:
         if selected_date not in df.index:
             return pd.DataFrame()
-        tabla["Último"] = df.loc[selected_date, columnas]
+        tabla["Último"] = df.loc[selected_tablero, columnas]
         for dias, nombre in zip([1, 5, 21, 252], ['D', 'W', 'M', 'A']):
-            pasada = df.shift(dias).loc[selected_date, columnas]
+            pasada = df.shift(dias).loc[selected_tablero, columnas]
             cambio = ((tabla["Último"] - pasada) / pasada) * 100
             tabla[f"Cambio {nombre} (%)"] = cambio
         tabla.index = [f"{label} {col}" for col in tabla.index]
