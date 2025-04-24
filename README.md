@@ -43,15 +43,3 @@ streamlit run streamlit_app.py
 Luego abrí el navegador en [http://localhost:8501](http://localhost:8501)
 
 ---
-
-## ☁️ Publicar en Streamlit Cloud (opcional)
-
-1. Subí este archivo y `streamlit_app.py` a un repositorio de GitHub.
-2. Iniciá sesión en [streamlit.io/cloud](https://streamlit.io/cloud).
-3. Seleccioná tu repositorio y desplegá la app sin necesidad de infraestructura propia.
-
----
-
-## 📬 Autor & Créditos
-
-Este dashboard fue generado automáticamente con ayuda de ChatGPT y diseñado para análisis profesional de curvas de tasas. Incluye visualizaciones avanzadas y personalizadas para usuarios financieros.
