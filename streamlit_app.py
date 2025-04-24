@@ -150,3 +150,86 @@ tablas.append(calcular_cambios(pca_df, "PCA", pca_df.columns))
 # Mostrar tabla final
 df_tablero = pd.concat(tablas)
 st.dataframe(df_tablero.style.highlight_null(null_color='lightgray'))
+
+# ========== MODIFICACIONES ==========
+
+# Ajuste de layout a pantalla completa
+st.set_page_config(page_title="Dashboard Curva del Tesoro - FRED API", layout="wide")
+
+# Función corregida para el tablero de cambios
+def calcular_cambios(df, label, columnas):
+    tabla = pd.DataFrame(index=columnas)
+    try:
+        if selected_date not in df.index:
+            return pd.DataFrame()
+        tabla["Último"] = df.loc[selected_date, columnas]
+        for dias, nombre in zip([1, 5, 21, 252], ['D', 'W', 'M', 'A']):
+            pasada = df.shift(dias).loc[selected_date, columnas]
+            cambio = ((tabla["Último"] - pasada) / pasada) * 100
+            tabla[f"Cambio {nombre} (%)"] = cambio
+        tabla.index = [f"{label} {col}" for col in tabla.index]
+        return tabla.round(2)
+    except:
+        return pd.DataFrame()
+
+# Visualización de Spot y Break-even en columnas
+st.subheader("1️⃣ Curva Spot del Tesoro y Break-even")
+col1, col2 = st.columns(2)
+
+with col1:
+    spot_curve = df_spot.loc[selected_date].dropna()
+    fig1, ax1 = plt.subplots()
+    x1 = [maturity_years[k] for k in spot_curve.index]
+    ax1.plot(x1, spot_curve.values, marker='o')
+    ax1.set_title("Curva Spot")
+    ax1.set_xlabel("Vencimiento (años)")
+    ax1.set_ylabel("Tasa (%)")
+    ax1.grid(True)
+    st.pyplot(fig1)
+
+with col2:
+    if selected_date in df_breakeven.index:
+        be_curve = df_breakeven.loc[selected_date].dropna()
+        if not be_curve.empty:
+            x2 = [int(k.strip("Y")) for k in be_curve.index]
+            fig2, ax2 = plt.subplots()
+            ax2.plot(x2, be_curve.values, marker='o', label="Break-even")
+            ax2.axhline(2.0, color='gray', linestyle='--', label='Objetivo Fed')
+            ax2.set_title("Curva Break-even")
+            ax2.set_xlabel("Vencimiento (años)")
+            ax2.set_ylabel("Inflación Esperada (%)")
+            ax2.legend()
+            ax2.grid(True)
+            st.pyplot(fig2)
+        else:
+            st.info("ℹ️ No hay datos break-even disponibles para esta fecha.")
+    else:
+        st.info("ℹ️ Fecha no válida para curva break-even.")
+
+# Visualización de PCA y Forward en columnas
+st.subheader("2️⃣ PCA y Forward")
+col3, col4 = st.columns(2)
+
+with col3:
+    pca_vals = pca_df.loc[selected_date]
+    fig3, ax3 = plt.subplots()
+    ax3.bar(pca_vals.index, pca_vals.values, color=["#1f77b4", "red" if pca_vals['Pendiente'] < -1 else "#1f77b4", "#2ca02c"])
+    ax3.axhline(0, color='black', linestyle='--')
+    ax3.set_title("PCA: Nivel, Pendiente, Curvatura")
+    st.pyplot(fig3)
+
+with col4:
+    from matplotlib.colors import TwoSlopeNorm
+    fwd_matrix = {}
+    for i, t1 in enumerate(sorted_terms[:-1]):
+        row = {}
+        for t2 in sorted_terms[i+1:]:
+            label = f"{t1}→{t2}"
+            if label in df_forward_all.columns:
+                row[t2] = df_forward_all.loc[selected_date, label]
+        fwd_matrix[t1] = row
+    df_fwd = pd.DataFrame(fwd_matrix).T
+    fig4, ax4 = plt.subplots(figsize=(8, 5))
+    sns.heatmap(df_fwd, annot=True, fmt=".2f", cmap="coolwarm", ax=ax4, cbar_kws={'label': 'Forward Rate (%)'})
+    ax4.set_title("Forward Rates Matrix")
+    st.pyplot(fig4)
