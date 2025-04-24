@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -307,3 +308,41 @@ fig4, ax4 = plt.subplots(figsize=(8, 5))
 sns.heatmap(df_fwd, annot=True, fmt=".2f", cmap="coolwarm", ax=ax4, cbar_kws={'label': 'Forward Rate (%)'})
 ax4.set_title("Forward Rates Matrix")
 st.pyplot(fig4)
+
+# ========== TABLERO DE CAMBIOS (%) ACTUALIZADO ==========
+
+st.subheader("5️⃣ Tablero de Tasas y Cambios (%)")
+
+# 📅 Fecha única para tablero (por simplicidad)
+valid_tablero_dates = df_spot.index.intersection(df_real.index).intersection(df_breakeven.index).intersection(df_forward_all.index).intersection(pca_df.index)
+if valid_tablero_dates.empty:
+    st.warning("No hay fechas comunes para calcular el tablero.")
+else:
+    selected_tablero = st.selectbox("📅 Fecha Tablero", sorted(valid_tablero_dates, reverse=True).strftime("%Y-%m-%d"), key="tablero")
+    selected_tablero = pd.to_datetime(selected_tablero)
+
+    def calcular_cambios(df, label, columnas):
+        tabla = pd.DataFrame(index=columnas)
+        try:
+            if selected_tablero not in df.index:
+                return pd.DataFrame()
+            tabla["Último"] = df.loc[selected_tablero, columnas]
+            for dias, nombre in zip([1, 5, 21, 252], ['D', 'W', 'M', 'A']):
+                pasada = df.shift(dias).loc[selected_tablero, columnas]
+                cambio = ((tabla["Último"] - pasada) / pasada) * 100
+                tabla[f"Cambio {nombre} (%)"] = cambio
+            tabla.index = [f"{label} {col}" for col in tabla.index]
+            return tabla.round(2)
+        except:
+            return pd.DataFrame()
+
+    # Armar tablero
+    tablas = []
+    tablas.append(calcular_cambios(df_spot, "Spot", df_spot.columns))
+    tablas.append(calcular_cambios(df_real, "Real", df_real.columns))
+    tablas.append(calcular_cambios(df_breakeven, "BEI", df_breakeven.columns))
+    tablas.append(calcular_cambios(df_forward_all, "FWD", df_forward_all.columns))
+    tablas.append(calcular_cambios(pca_df, "PCA", pca_df.columns))
+
+    df_tablero = pd.concat(tablas).dropna(how='all')
+    st.dataframe(df_tablero.style.highlight_null(null_color='lightgray'))
